@@ -1,0 +1,19 @@
+(game "Tic-Tac-Toe" 
+    (players 2)
+    (equipment 
+        (board (square 3))
+    ) 
+    
+    (rules 
+        (play
+            (repeat (P1 P2)
+                (place (destination empty))
+            )
+        )
+        
+        (end 
+            (if (line 3) (mover win))
+            (if (full_board) (draw))    
+        )
+    )
+)

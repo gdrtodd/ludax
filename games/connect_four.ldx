@@ -1,0 +1,19 @@
+(game "Tic-Tac-Toe" 
+    (players 2)
+    (equipment 
+        (board (rectangle 6 7))
+    ) 
+    
+    (rules 
+        (play
+            (repeat (P1 P2)
+                (place (destination (and empty (or (edge bottom) (adjacent occupied direction:up)))))
+            )
+        )
+        
+        (end 
+            (if (line 4) (mover win))
+            (if (full_board) (draw))    
+        )
+    )
+)

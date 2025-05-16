@@ -1,0 +1,84 @@
+<!DOCTYPE html>  
+<html lang="en">  
+<head>  
+    <meta charset="UTF-8">  
+    <title>Todo App</title>  
+    <link rel="stylesheet" type="text/css" href="{{url_for('static', filename='main.css')}}">
+    <script>
+        async function handleClick(event) {
+            var rect = event.target.getBoundingClientRect();
+            var x = event.clientX - rect.left;
+            var y = event.clientY - rect.top;
+
+            // alert('x: ' + x + ', y: ' + y);
+
+            response = await fetch('/step', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    x: x,
+                    y: y,
+                }),
+            });
+
+            var data = await response.json();
+            document.getElementById('game_board').innerHTML = data['svg'];
+            document.getElementById("game_board").innerHTML += "";
+
+            // Wait for the DOM to update
+            await new Promise(resolve => setTimeout(resolve, 0));
+
+            // Update the current player
+            var cur_player = document.getElementById('cur_player');
+            if (data['current_player'] == 0) {
+                cur_player.innerHTML = 'Current player: Player 1';
+            }
+            else {
+                cur_player.innerHTML = 'Current player: Player 2';
+            }
+
+            // Update the scores
+            var p1_score = document.getElementById('p1_score');
+            var p2_score = document.getElementById('p2_score');
+            p1_score.innerHTML = 'Player 1 score: ' + data['scores'][0];
+            p2_score.innerHTML = 'Player 2 score: ' + data['scores'][1];
+            
+            // Alert the user on game end 
+            var winner = data['winner'];
+            if (data['terminated']) {
+                if (winner == 0) {
+                    alert('Player 1 wins!');
+                }
+                else if (winner == 1) {
+                    alert('Player 2 wins!');
+                }
+                else {
+                    alert('Draw!');
+                }
+
+                // Reset the game
+                response = await fetch('/reset', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({}),
+                });
+
+                var data = await response.json();
+                document.getElementById('game_board').innerHTML = data['svg'];
+                document.getElementById("game_board").innerHTML += "";
+            }
+        }
+    </script>  
+  
+</head>  
+<body>  
+    <h1>Game Rendering</h1>  
+    <div id="svg_container">
+        {{ game_svg }}
+    </div>  
+    <h2 id="cur_player">Current player: Player 1</h2>
+    <h2 id="p1_score">Player 1 score: 0</h2>
+    <h2 id="p2_score">Player 2 score: 0</h2>
+</body>
+
+</html> 

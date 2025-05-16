@@ -1,0 +1,18 @@
+flask
+flax
+lark
+matplotlib
+pandas
+svgwrite
+thefuzz
+tqdm
+
+# Alphazero
+pgx>=2.0.0
+dm-haiku
+mctx
+optax
+wandb
+omegaconf
+pydantic
+numpy<2.0

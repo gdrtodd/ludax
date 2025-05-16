@@ -1,0 +1,26 @@
+(game "Pente" 
+    (players 2)
+    (equipment
+        (board (square 19))
+    ) 
+    
+    (rules 
+        (play
+            (once-through (P1)
+                (place (destination center))
+            )
+            (repeat (P2 P1)
+                (place 
+                    (destination empty)
+                    (effects 
+                        (capture (custodial 2 orientation:orthogonal) increment_score:true)
+                    )
+                )
+            )
+        )
+        (end 
+            (if (line 5) (mover win))
+            (if (>= (score mover) 10) (mover win))
+        )
+    )
+)

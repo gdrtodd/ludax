@@ -1,0 +1,27 @@
+(game "Complexity Demo" 
+    (players 2)
+    (equipment 
+        (board (square 10))
+    ) 
+    
+    (rules 
+        (play
+            (once-through (P1)
+                (place (destination empty))
+            )
+            (repeat (P2 P2 P1 P1)
+                (place 
+                    (destination (and empty (not (adjacent (adjacent (prev_move opponent))))))
+                    (effects 
+                        (capture (adjacent (prev_move mover)) increment_score:true)
+                    )
+                )
+            )
+        )
+        (end 
+            (if (line 4) (mover win))
+            (if (>= (score mover) 5) (mover win))
+            (if (full_board) (draw))
+        )
+    )
+)

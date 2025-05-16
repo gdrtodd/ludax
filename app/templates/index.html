@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Games</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='main.css') }}">
+</head>
+<body>
+    <div>
+        <h2>Available Games</h2>
+        <ul>
+            {% for game in games %}
+            <li>
+                <a href="{{ url_for('render_game', id=game) }}">
+                    {{ game }}
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</body>
+</html>

@@ -1,0 +1,19 @@
+(game "Gomoku" 
+    (players 2)
+    (equipment 
+        (board (square 15))
+    ) 
+    
+    (rules 
+        (play
+            (repeat (P1 P2)
+                (place (destination empty))
+            )
+        )
+        
+        (end 
+            (if (line 5 exact:true) (mover win))
+            (if (full_board) (draw))    
+        )
+    )
+)

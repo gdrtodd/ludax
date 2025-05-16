@@ -1,0 +1,35 @@
+(game "Reversi" 
+    (players 2)
+    (equipment 
+        (board (square 8))
+    ) 
+    
+    (rules
+        (start
+            (place P1 (27 36))
+            (place P2 (28 35))
+        )
+        (play
+            (repeat (P2 P1)
+                (place 
+                    (destination empty)
+                    (result 
+                        (exists
+                            (custodial any)
+                        )
+                    )
+                    (effects 
+                        (flip (custodial any))
+                        (set_score mover (count (occupied mover)))
+                        (set_score opponent (count (occupied opponent)))
+                    )
+                )
+                (force_pass)
+            )
+        )
+        
+        (end
+            (if (passed both) (by_score))    
+        )
+    )
+)

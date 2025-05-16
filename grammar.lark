@@ -1,0 +1,201 @@
+// ---Root---
+game: "(game" name players equipment rules ")"
+
+// ---Players---
+players: "(players" positive_int ")"
+
+// ---Equipment---
+equipment: "(equipment" board ")"
+board: "(board" (board_square | board_rectangle | board_hexagon | board_hex_rectangle) ")"
+board_square: "(square" number ")"
+board_rectangle: "(rectangle" number number ")"
+board_hexagon: "(hexagon"  number ")"
+board_hex_rectangle: "(hex_rectangle" number number ")"
+
+// ---Rules---
+rules: "(rules" start_rules? play_rules end_rules ")"
+
+// ---Start rules---
+start_rules: "(start" start_rule+ ")"
+start_rule: start_place
+start_place: "(place" player_reference pattern_arg ")"
+
+// ---Play rules---
+play_rules: "(play" play_phase+ ")"
+play_phase: phase_once_through | phase_repeat
+phase_once_through: "(once-through" play_mover_order play_mechanic ")"
+phase_repeat: "(repeat" play_mover_order play_mechanic ")"
+play_mover_order: "(" player_reference+ ")"
+
+play_mechanic: play_place force_pass? 
+play_place: "(place" mover_reference? place_destination_constraint place_result_constraint? play_effects?")"
+force_pass: "(force_pass" ")"
+
+// ---Constraints---
+place_destination_constraint: "(destination" super_mask ")"
+place_result_constraint: "(result" super_predicate ")"
+
+// ---Effects---
+play_effects: "(effects" play_effect+ ")"
+play_effect: effect_capture 
+           | effect_flip
+           | effect_increment_score
+           | effect_set_score
+
+effect_capture: "(capture" super_mask mover_reference? increment_score_arg? ")"
+effect_flip: "(flip" super_mask mover_reference? ")"
+effect_increment_score: "(increment_score" mover_reference function ")"
+effect_set_score: "(set_score" mover_reference function ")"
+
+// ---Functions---
+function: function_add
+        | function_connected
+        | function_constant
+        | function_count
+        | function_line
+        | function_multiply
+        | function_score
+        | function_subtract
+
+function_add: "(add" function+ ")"
+function_connected: "(connected" multi_mask_arg mover_reference? direction_arg? ")"
+function_constant: positive_int
+function_count: "(count" super_mask ")"
+function_line: "(line" positive_int orientation_arg? exact_arg? ")"
+function_multiply: "(multiply" function+ ")"
+function_score: "(score" mover_reference ")"
+function_subtract: "(subtract" function function ")"
+
+// ---End rules---
+end_rules: "(end" end_rule+ ")"
+end_rule: "(if" super_predicate end_rule_result ")"
+?end_rule_result: result_win | result_lose | result_draw | result_by_score
+
+// -- Result definitions --
+result_win: "(" mover_reference "win" ")"
+result_lose: "(" mover_reference "lose" ")"
+result_draw: "(" "draw" ")"
+result_by_score: "(" "by_score" ")"
+
+// -- Mask definitions --
+super_mask: mask | super_mask_and | super_mask_or | super_mask_not
+super_mask_and: "(and" super_mask+ ")"
+super_mask_or: "(or" super_mask+ ")"
+super_mask_not: "(not" super_mask ")"
+
+mask: mask_adjacent
+    | mask_center
+    | mask_corners
+    | mask_custodial
+    | mask_edge
+    | mask_empty
+    | mask_occupied
+    | mask_pattern
+    | mask_prev_move
+
+mask_adjacent: "(adjacent" super_mask direction_arg? ")"
+mask_center: "center"
+mask_corners: "corners"
+mask_custodial: "(custodial" custodial_length_arg mover_reference? orientation_arg? ")"
+mask_edge: "(edge" edge ")"
+mask_empty: "empty"
+mask_occupied: "occupied" | "(occupied" mover_reference ")"
+mask_pattern: "(pattern" dimensions_arg pattern_arg rotate_arg? ")"
+mask_prev_move: "(prev_move" mover_reference ")"
+
+// "Multi-masks" are special keywords that are manually split into multiple
+// sub-masks at compile time. This is mostly useful for the "connected" function,
+// which expects a list of masks to check for connections between
+multi_mask: multi_mask_corners
+          | multi_mask_edges
+          | multi_mask_edges_no_corners
+
+multi_mask_corners: "corners"
+multi_mask_edges: "edges"
+multi_mask_edges_no_corners: "edgesNoCorners"
+
+// ---Predicate definitions---
+super_predicate: predicate | super_predicate_and | super_predicate_or | super_predicate_not
+super_predicate_and: "(and" super_predicate+ ")"
+super_predicate_or: "(or" super_predicate+ ")"
+super_predicate_not: "(not" super_predicate ")"
+
+predicate: predicate_equals
+         | predicate_exists
+         | predicate_full_board
+         | predicate_function
+         | predicate_greater_equals
+         | predicate_less_equals
+         | predicate_mover_is
+         | predicate_passed
+
+predicate_equals: "(=" function+ ")"
+predicate_exists: "(exists" super_mask ")" // technically equivalent to (>= (count mask) 1) 
+predicate_full_board: "(" "full_board" ")"
+predicate_function: function // special syntax which is equivalent to "(>= function 1)"
+predicate_greater_equals: "(>=" function function ")"
+predicate_less_equals: "(<=" function function ")"
+predicate_mover_is: "(mover_is" player_reference ")"
+predicate_passed: "(passed" (mover_reference | BOTH) ")"
+
+// Additional (potentially optional) arguments for predicates
+custodial_length_arg: ANY | positive_int
+dimensions_arg: "(" positive_int positive_int ")"
+direction_arg: "direction:" direction
+exact_arg: "exact:" boolean
+increment_score_arg: "increment_score:" boolean
+multi_mask_arg: multi_mask | "(" super_mask+ ")"
+orientation_arg: "orientation:" orientation
+pattern_arg: "(" positive_int+ ")"
+rotate_arg: "rotate:" boolean
+
+// General-purpose definitions
+?number: SIGNED_NUMBER
+?positive_int: /[0-9]+/
+?boolean: TRUE | FALSE
+?edge: TOP | BOTTOM | LEFT | RIGHT | TOP_LEFT | TOP_RIGHT | BOTTOM_LEFT | BOTTOM_RIGHT
+?direction: UP | DOWN | LEFT | RIGHT | UP_LEFT | UP_RIGHT | DOWN_LEFT | DOWN_RIGHT | VERTICAL | HORIZONTAL | ORTHOGONAL | DIAGONAL | BACK_DIAGONAL | FORWARD_DIAGONAL | ANY
+?orientation: VERTICAL | HORIZONTAL | ORTHOGONAL | DIAGONAL | BACK_DIAGONAL | FORWARD_DIAGONAL | ANY
+// ----------------------------
+
+?player_reference: P1 | P2
+?mover_reference: MOVER | OPPONENT
+name: STRING
+variable_name: /\?[a-z][a-z0-9]*/
+id: /[a-zA-Z0-9_]+/
+
+// Constants
+TOP: "top"
+BOTTOM: "bottom"
+UP: "up"
+DOWN: "down"
+LEFT: "left"
+RIGHT: "right"
+TOP_LEFT: "top_left"
+TOP_RIGHT: "top_right"
+BOTTOM_LEFT: "bottom_left"
+BOTTOM_RIGHT: "bottom_right"
+UP_LEFT: "up_left"
+UP_RIGHT: "up_right"
+DOWN_LEFT: "down_left"
+DOWN_RIGHT: "down_right"
+VERTICAL: "vertical"
+HORIZONTAL: "horizontal"
+ORTHOGONAL: "orthogonal"
+DIAGONAL: "diagonal"
+BACK_DIAGONAL: "back_diagonal"
+FORWARD_DIAGONAL: "forward_diagonal"
+ANY: "any"
+TRUE: "true"
+FALSE: "false"
+MOVER: "mover"
+OPPONENT: "opponent"
+P1: "P1"
+P2: "P2"
+BOTH: "both"
+
+// Lark imports
+%import common.ESCAPED_STRING -> STRING
+%import common.SIGNED_NUMBER
+%import common.WS
+%ignore WS

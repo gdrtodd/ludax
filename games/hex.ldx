@@ -1,0 +1,20 @@
+(game "Tic-Tac-Toe" 
+    (players 2)
+    (equipment 
+        (board (hex_rectangle 11 11))
+    ) 
+    
+    (rules 
+        (play
+            (repeat (P1 P2)
+                (place (destination empty))
+            )
+        )
+        
+        (end 
+            (if (and (>= (connected ((edge top) (edge bottom))) 2) (mover_is P1)) (mover win))
+            (if (and (>= (connected ((edge left) (edge right))) 2) (mover_is P2)) (mover win))
+            (if (full_board) (draw))    
+        )
+    )
+)

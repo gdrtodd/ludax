@@ -1,0 +1,18 @@
+(game "Yavalath" 
+    (players 2)
+    (equipment 
+        (board (hexagon 9))
+    ) 
+    
+    (rules 
+        (play 
+            (repeat (P1 P2)
+                (place (destination empty))
+            )
+        )
+        (end 
+            (if (line 4) (mover win))
+            (if (line 3) (mover lose))
+        )
+    )
+)

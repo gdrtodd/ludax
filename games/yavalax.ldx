@@ -1,0 +1,29 @@
+(game "Yavalax" 
+    (players 2)
+    (equipment 
+        (board (square 13))
+    ) 
+    
+    (rules 
+        (play
+            (once-through (P1)
+                (place (destination empty))
+            )
+            (repeat (P2 P2 P1 P1)
+                (place
+                    (destination empty)
+                    (result 
+                        (and 
+                            (not (line 5))
+                            (not (= (line 4) 1))
+                        )
+                    )
+                )
+            )
+        )
+        (end 
+            (if (>= (line 4) 2) (mover win))
+            (if (full_board) (draw))
+        )
+    )
+)
