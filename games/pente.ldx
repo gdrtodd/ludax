@@ -13,7 +13,7 @@
                 (place 
                     (destination empty)
                     (effects 
-                        (capture (custodial 2 orientation:orthogonal) increment_score:true)
+                        (capture (custodial 2) increment_score:true)
                     )
                 )
             )
