@@ -1,0 +1,36 @@
+(game "ataxx"
+    (players 2)
+    (equipment
+        (board (square 7))
+        (pieces
+            ("token" both)
+        )
+    )
+    (rules
+        (start
+            (place "token" P1 (6 42))
+            (place "token" P2 (0 48))
+        )
+        (play
+            (repeat (P1 P2)
+                (move
+                    (or
+                        (step "token")
+                    )
+                    (effects
+                        (flip (and (occupied opponent) (adjacent (prev_move mover))))
+                        
+                        (if (and (action_was mover step))
+                            (place "token" mover (prev_start mover))
+                        )
+
+                        (set_score mover (count (occupied mover)))
+                        (set_score opponent (count (occupied opponent)))
+                    )
+                )
+            )
+        )
+        (end
+            (if (line "token" 4) (mover win))
+            (if (full_board) (draw))))
+)

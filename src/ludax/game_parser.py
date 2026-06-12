@@ -885,8 +885,9 @@ class GameRuleParser(Transformer):
 
                     captured_mask = jnp.zeros_like(state.captured).at[step_index].set(True)
                     previous_actions = state.previous_actions.at[jnp.array([state.current_player, 2])].set(ACTION_DTYPE(end_index))
+                    previous_starts = state.previous_starts.at[jnp.array([state.current_player, 2])].set(ACTION_DTYPE(start))
 
-                    return state._replace(board=board, previous_actions=previous_actions, captured=captured_mask)
+                    return state._replace(board=board, previous_actions=previous_actions, previous_starts=previous_starts, captured=captured_mask)
                 
             else:
                 def apply_action_fn(state, action):
@@ -897,8 +898,9 @@ class GameRuleParser(Transformer):
                     board = board.at[piece, start].set(EMPTY)
 
                     previous_actions = state.previous_actions.at[jnp.array([state.current_player, 2])].set(ACTION_DTYPE(end_index))
+                    previous_starts = state.previous_starts.at[jnp.array([state.current_player, 2])].set(ACTION_DTYPE(start))
 
-                    return state._replace(board=board, previous_actions=previous_actions)
+                    return state._replace(board=board, previous_actions=previous_actions, previous_starts=previous_starts)
                 
         else:
             indices = jnp.repeat(jnp.arange(self.game_info.board_size, dtype=ACTION_DTYPE), len(p1_direction_indices))
@@ -946,8 +948,9 @@ class GameRuleParser(Transformer):
                 board = state.board.at[piece, end_idx].set(state.current_player)
                 board = board.at[piece, start_idx].set(EMPTY)
                 previous_actions = state.previous_actions.at[jnp.array([state.current_player, 2])].set(ACTION_DTYPE(end_idx))
-                
-                return state._replace(board=board, previous_actions=previous_actions)
+                previous_starts = state.previous_starts.at[jnp.array([state.current_player, 2])].set(ACTION_DTYPE(start_idx))
+
+                return state._replace(board=board, previous_actions=previous_actions, previous_starts=previous_starts)
         
         move_type_idx = list(MoveTypes).index(MoveTypes.HOP)
         def can_move_again_fn(state):
@@ -1038,9 +1041,12 @@ class GameRuleParser(Transformer):
             
             board = state.board.at[piece, end_idx].set(state.current_player)
             board = board.at[piece, start_idx].set(EMPTY)
-            previous_actions = state.previous_actions.at[jnp.array([state.current_player, 2])].set(ACTION_DTYPE(end_idx))
             
-            return state._replace(board=board, previous_actions=previous_actions)
+            previous_actions = state.previous_actions.at[jnp.array([state.current_player, 2])].set(ACTION_DTYPE(end_idx))
+            previous_starts = state.previous_starts.at[jnp.array([state.current_player, 2])].set(ACTION_DTYPE(start_idx))
+
+            
+            return state._replace(board=board, previous_actions=previous_actions, previous_starts=previous_starts)
         
         # By definition, a slide will always result in at least one legal slide for the moving piece
         # (i.e. back to its original position), so we can set this to True without checking
@@ -1096,9 +1102,11 @@ class GameRuleParser(Transformer):
 
                 board = state.board.at[piece, end_idx].set(state.current_player)
                 board = board.at[piece, start_idx].set(EMPTY)
+                
                 previous_actions = state.previous_actions.at[jnp.array([state.current_player, 2])].set(ACTION_DTYPE(end_idx))
+                previous_starts = state.previous_starts.at[jnp.array([state.current_player, 2])].set(ACTION_DTYPE(start_idx))
 
-                return state._replace(board=board, previous_actions=previous_actions)
+                return state._replace(board=board, previous_actions=previous_actions, previous_starts=previous_starts)
 
         # Case 2: action space is (from_pos, to_pos)
         elif self.game_info.action_type == ActionTypes.FROM_TO:
@@ -1135,9 +1143,11 @@ class GameRuleParser(Transformer):
                 
                 board = state.board.at[piece, end_idx].set(state.current_player)
                 board = board.at[piece, start_idx].set(EMPTY)
-                previous_actions = state.previous_actions.at[jnp.array([state.current_player, 2])].set(ACTION_DTYPE(end_idx))
                 
-                return state._replace(board=board, previous_actions=previous_actions)
+                previous_actions = state.previous_actions.at[jnp.array([state.current_player, 2])].set(ACTION_DTYPE(end_idx))
+                previous_starts = state.previous_starts.at[jnp.array([state.current_player, 2])].set(ACTION_DTYPE(start_idx))
+
+                return state._replace(board=board, previous_actions=previous_actions, previous_starts=previous_starts)
 
         else:
             raise ValueError(f"Move step not implemented for action space type {self.game_info.action_space_type}")
@@ -1351,6 +1361,50 @@ class GameRuleParser(Transformer):
         
         return apply_effects_fn
     
+    def effect_place(self, children):
+        '''
+        Place one or more pieces on the board according to a pattern or mask
+        '''
+        piece, mover_ref, (place_arg_type, place_arg_info) = children
+
+        if mover_ref == PlayerAndMoverRefs.MOVER:
+            offset = 0
+        elif mover_ref == PlayerAndMoverRefs.OPPONENT:
+            offset = 1
+
+        if place_arg_type == OptionalArgs.INDICES:
+            pattern = jnp.array(place_arg_info, dtype=ACTION_DTYPE)
+
+            def apply_effects_fn(state, original_player):
+                updated_state = state._replace(current_player=original_player)
+                player = (updated_state.current_player + offset) % 2
+                board = state.board.at[piece, pattern].set(player)
+                return state._replace(board=board)
+            
+        elif place_arg_type == OptionalArgs.MULTI_MASK:
+
+            # Case where there's only one mask function (it will be a tuple of (fn, info))
+            if isinstance(place_arg_info, tuple):
+                place_mask_fns = [place_arg_info[0]]
+            else:
+                place_mask_fns, _ = list(zip(*place_arg_info))
+            
+            collect_values = utils._get_collect_values_fn(place_mask_fns)
+
+            def apply_effects_fn(state, original_player):
+                updated_state = state._replace(current_player=original_player)
+                player = (updated_state.current_player + offset) % 2
+                all_masks = collect_values(updated_state)
+                result = all_masks.any(axis=0).astype(BOARD_DTYPE)
+                sub_board = jnp.where(result, player, updated_state.board[piece])
+                board = updated_state.board.at[piece].set(sub_board)
+                return state._replace(board=board)
+
+        else:
+            raise NotImplementedError(f"Effect place argument type {place_arg_type} not implemented yet!")
+        
+        return apply_effects_fn
+
     def effect_promote(self, children):
         '''
         Promote pieces on the board according to a mask and a resulting piece type
@@ -1928,6 +1982,27 @@ class GameRuleParser(Transformer):
             mask = jnp.zeros(self.game_info.board_size).astype(jnp.bool_)
             prev_move = state.previous_actions[(state.current_player + offset) % 2]
             mask = jax.lax.select(prev_move != -1, mask.at[prev_move].set(True), mask)
+
+            return mask.astype(BOARD_DTYPE)
+        
+        return mask_fn, {}
+    
+    def mask_prev_start(self, children):
+        '''
+        Returns a mask that is only active at the start position of the player's
+        last move (specifically for move-type games)
+        '''
+        mover_ref = children[0]
+
+        if mover_ref == PlayerAndMoverRefs.MOVER:
+            offset = 0
+        elif mover_ref == PlayerAndMoverRefs.OPPONENT:
+            offset = 1
+
+        def mask_fn(state):
+            mask = jnp.zeros(self.game_info.board_size).astype(jnp.bool_)
+            prev_start = state.previous_starts[(state.current_player + offset) % 2]
+            mask = jax.lax.select(prev_start != -1, mask.at[prev_start].set(True), mask)
 
             return mask.astype(BOARD_DTYPE)
         

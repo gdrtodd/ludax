@@ -73,6 +73,7 @@ play_effect: effect_capture
            | effect_extra_turn
            | effect_flip
            | effect_increment_score
+           | effect_place
            | effect_promote
            | effect_set_score
 
@@ -80,6 +81,7 @@ effect_capture: "(" "capture" super_mask mover_arg? increment_score_arg? ")"
 effect_extra_turn: "(" "extra_turn" mover_reference same_piece_arg? ")"
 effect_flip: "(" "flip" super_mask mover_arg? ")"
 effect_increment_score: "(" "increment_score" mover_reference function ")"
+effect_place: "(" "place" piece_reference mover_reference (indices_arg | multi_mask_arg) ")"
 effect_promote: "(" "promote" piece_reference piece_reference super_mask mover_arg? ")" // TODO: include mover arg?
 effect_set_score: "(" "set_score" mover_reference function ")"
 
@@ -133,6 +135,7 @@ mask: mask_adjacent
     | mask_hopped
     | mask_occupied
     | mask_prev_move
+    | mask_prev_start
     | mask_promoted
     | mask_row
     | mask_region
@@ -150,6 +153,7 @@ mask_hopped: "(" "hopped" ")"
 // TODO: should things like "mover_reference" be replaced with a "mover_arg" to match syntax elsewhere? Probably yes...
 mask_occupied: "(" "occupied" (mover_reference | player_reference)? ")"
 mask_prev_move: "(" "prev_move" mover_reference ")"
+mask_prev_start: "(" "prev_start" mover_reference ")"
 mask_promoted: "(" "promoted" ")"
 mask_row: "(" "row" nonnegative_int ")"
 mask_region: "(" "region" region_reference ")"

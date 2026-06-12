@@ -5,6 +5,7 @@ def _read_game(game_name: str) -> str:
         return f.read()
 
 # Package a subset of default game implementations
+ataxx = _read_game('ataxx')
 connect_four = _read_game('connect_four')
 connect_six = _read_game('connect_six')
 dai_hasami_shogi = _read_game('dai_hasami_shogi')

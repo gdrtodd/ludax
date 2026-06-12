@@ -226,6 +226,12 @@ class GameInfoExtractor(Visitor):
     def move_slide(self, tree):
         self.used_mechanics.add(MoveTypes.SLIDE)
 
+        # As with previous_actions, the third position tracks the start
+        # position for the most recent move, regardless of which player made it
+        if "previous_starts" not in self.game_state_attributes:
+            self.game_state_attributes.append("previous_starts")
+            self.defaults.append(jnp.zeros(3, dtype=ACTION_DTYPE))
+
     def move_hop(self, tree):
         self.used_mechanics.add(MoveTypes.HOP)
         capture_arg = self._filter_children_args(tree, "capture_arg")[0]
@@ -235,9 +241,21 @@ class GameInfoExtractor(Visitor):
                 self.game_state_attributes.append("captured")
                 self.defaults.append(jnp.zeros(self.game_info.board_size, dtype=jnp.bool_))
 
+        # As with previous_actions, the third position tracks the start
+        # position for the most recent move, regardless of which player made it
+        if "previous_starts" not in self.game_state_attributes:
+            self.game_state_attributes.append("previous_starts")
+            self.defaults.append(jnp.zeros(3, dtype=ACTION_DTYPE))
+
     def move_step(self, tree):
         self.used_mechanics.add(MoveTypes.STEP)
         dir_child = self._filter_children_args(tree, "direction_arg")[0]
+
+        # As with previous_actions, the third position tracks the start
+        # position for the most recent move, regardless of which player made it
+        if "previous_starts" not in self.game_state_attributes:
+            self.game_state_attributes.append("previous_starts")
+            self.defaults.append(jnp.zeros(3, dtype=ACTION_DTYPE))
 
     def effect_capture(self, tree):
         '''
@@ -279,6 +297,11 @@ class GameInfoExtractor(Visitor):
         if "hopped" not in self.game_state_attributes:
             self.game_state_attributes.append("hopped")
             self.defaults.append(jnp.zeros(self.game_info.board_size, dtype=jnp.bool_))
+
+    def mask_prev_start(self, tree):
+        if "previous_starts" not in self.game_state_attributes:
+            self.game_state_attributes.append("previous_starts")
+            self.defaults.append(jnp.zeros(3, dtype=ACTION_DTYPE))
 
     def predicate_action_was(self, tree):
         if "action_was" not in self.game_state_attributes:
