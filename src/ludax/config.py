@@ -153,12 +153,14 @@ class Masks(StrEnum):
     CORNER_CUSTODIAL = 'mask_corner_custodial'
     CUSTODIAL = 'mask_custodial'
     EMPTY = 'mask_empty'
+    LINE_OF = 'mask_line_of'
     LOOP = 'mask_loop'
     OCCUPIED = 'mask_occupied'
 
 class MoveTypes(StrEnum):
     PLACE = 'move_place'
     HOP = 'move_hop'
+    JUMP = 'move_jump'
     SLIDE = 'move_slide'
     STEP = 'move_step'
 
@@ -204,10 +206,12 @@ DEFAULT_ARGUMENTS = {
     Masks.ADJACENT: {OptionalArgs.DIRECTION: 'any'},
     Masks.CORNER_CUSTODIAL: {OptionalArgs.MOVER: 'mover'},
     Masks.CUSTODIAL: {OptionalArgs.MOVER: 'mover', OptionalArgs.ORIENTATION: 'any'},
+    Masks.LINE_OF: {OptionalArgs.DIRECTION: 'any', OptionalArgs.DISTANCE: None},
     Masks.LOOP: {OptionalArgs.MOVER: 'mover'},
     Masks.OCCUPIED: {OptionalArgs.MOVER: 'mover'},
 
     MoveTypes.HOP: {OptionalArgs.DIRECTION: 'any', OptionalArgs.PIECE: 'any', OptionalArgs.HOP_OVER: 'both', OptionalArgs.CAPTURE: False, OptionalArgs.PRIORITY: 0},
+    MoveTypes.JUMP: {OptionalArgs.DISTANCE: None, OptionalArgs.PRIORITY: 0},
     MoveTypes.SLIDE: {OptionalArgs.DIRECTION: 'any', OptionalArgs.DISTANCE: None, OptionalArgs.PRIORITY: 0},
     MoveTypes.STEP: {OptionalArgs.DIRECTION: 'any', OptionalArgs.PRIORITY: 0},
 

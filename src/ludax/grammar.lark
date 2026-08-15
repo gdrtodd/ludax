@@ -53,10 +53,12 @@ place_result_constraint: "(" "result" super_predicate ")"
 play_move: "(" "move" move_type_definition play_effects? ")"
 move_type_definition: move_type | "(" "or" move_type+ ")"
 move_type: move_hop
+         | move_jump
          | move_slide
          | move_step
 
 move_hop: "(" "hop" piece_reference direction_arg? piece_arg? hop_over_arg? capture_arg? priority_arg? ")"
+move_jump: "(" "jump" piece_reference distance_arg? priority_arg? ")"
 move_slide: "(" "slide" piece_reference direction_arg? distance_arg? priority_arg? ")"
 move_step: "(" "step" piece_reference direction_arg? priority_arg? ")"
 
@@ -133,6 +135,7 @@ mask: mask_adjacent
     | mask_edge
     | mask_empty
     | mask_hopped
+    | mask_line_of
     | mask_occupied
     | mask_prev_move
     | mask_prev_start
@@ -150,6 +153,7 @@ mask_custodial: "(" "custodial" piece_reference custodial_length_arg mover_arg? 
 mask_edge: "(" "edge" (edge | FORWARD | BACKWARD) ")"
 mask_empty: "(" "empty" ")"
 mask_hopped: "(" "hopped" ")"
+mask_line_of: "(" "line_of" super_mask direction_arg? distance_arg? ")"
 // TODO: should things like "mover_reference" be replaced with a "mover_arg" to match syntax elsewhere? Probably yes...
 mask_occupied: "(" "occupied" (mover_reference | player_reference)? ")"
 mask_prev_move: "(" "prev_move" mover_reference ")"

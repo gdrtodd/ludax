@@ -316,6 +316,12 @@ class GameInfoExtractor(Visitor):
             num_move_types = len(MoveTypes)
             self.defaults.append(jnp.zeros((2, self.game_info.num_piece_types, num_move_types), dtype=jnp.bool_))
 
+    def mask_line_of(self, tree):
+        '''
+        The line_of mask uses sliding logic
+        '''
+        self.game_info.uses_slide_logic = True
+
     '''
     Custom assignments for relative directions (i.e. "forward")
     '''

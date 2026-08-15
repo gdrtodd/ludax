@@ -971,10 +971,29 @@ class GameRuleParser(Transformer):
         
         return piece, MoveTypes.HOP, legal_action_fn, apply_action_fn, can_move_again_fn, priority
 
+    def move_jump(self, children):
+        '''
+        Move a piece by picking it up and placing it in an empty cell within a certain distance,
+        ignoring directions and occupied cells in between
+
+        TODO TODO
+        '''
+
+        piece, *optional_args = children
+        optional_args = self._parse_optional_args(optional_args)
+
+        distance = optional_args[OptionalArgs.DISTANCE]
+        if distance is None:
+            distance = max(self.game_info.observation_shape[:2])
+
+        priority = optional_args[OptionalArgs.PRIORITY]
+
+        jump_indices = utils._get_jump_indices(self.game_info, distance)
+
     def move_slide(self, children):
         '''
-        Slide a piece in one of the specified directions (default to any) any number of spaces,
-        limited by the board boundaries and the non-empty cell encountered
+        Slide a piece in one of the specified directions (default to any) a number of spaces
+        (also default to any number), limited by the board boundaries and non-empty cells
         '''
         
         piece, *optional_args = children
@@ -988,8 +1007,6 @@ class GameRuleParser(Transformer):
 
         direction = optional_args[OptionalArgs.DIRECTION]
         p1_direction_indices, p2_direction_indices = utils._get_direction_indices(self.game_info, direction)
-
-        # TODO
         all_direction_indices = jnp.array([p1_direction_indices, p2_direction_indices], dtype=BOARD_DTYPE)
         
         if self.game_info.action_type != ActionTypes.FROM_TO:
@@ -1050,6 +1067,8 @@ class GameRuleParser(Transformer):
         
         # By definition, a slide will always result in at least one legal slide for the moving piece
         # (i.e. back to its original position), so we can set this to True without checking
+        # TODO: not necessarily -- consider a game like Amazons where the effect of a move could place an obstacle that prevents
+        #       further slides
         move_type_idx = list(MoveTypes).index(MoveTypes.SLIDE)
         def can_move_again_fn(state):
             return state._replace(can_move_again=state.can_move_again.at[state.current_player, piece, move_type_idx].set(1))
@@ -1943,6 +1962,41 @@ class GameRuleParser(Transformer):
         def mask_fn(state):
             return state.hopped.astype(BOARD_DTYPE)
         
+        return mask_fn, {}
+
+    def mask_line_of(self, children):
+        '''
+        Returns a mask that's true at all the positions which are in a line with the
+        positions that are true in the child mask. This is basically equivalent to
+        computing the legal "slides" from the child mask without the restriction of
+        stopping at the first occupied position
+        '''
+        (child_mask_fn, _), *optional_args = children
+        optional_args = self._parse_optional_args(optional_args)
+
+        distance = optional_args[OptionalArgs.DISTANCE]
+        if distance is None:
+            distance = max(self.game_info.observation_shape[:2])
+
+        direction = optional_args[OptionalArgs.DIRECTION]
+        p1_direction_indices, p2_direction_indices = utils._get_direction_indices(self.game_info, direction)
+        all_direction_indices = jnp.array([p1_direction_indices, p2_direction_indices], dtype=BOARD_DTYPE)
+
+        def mask_fn(state):
+            direction_indices = all_direction_indices[state.current_player]
+
+            # Need to restrict the slide indices to exclude the origin positions
+            slide_indices = self.slide_lookup[direction_indices, :, 1:distance].transpose(1, 0, 2) # shape (board_size, num_directions, distance)
+
+            # Need to expand child_mask to [board_size, 1, 1] so that it can be broadcasted to the shape of slide_indices
+            child_mask = child_mask_fn(state)
+            child_mask = child_mask[:, jnp.newaxis, jnp.newaxis]
+
+            in_line_positions = jnp.where(child_mask, slide_indices, self.game_info.board_size+1).reshape(-1)
+            mask = jnp.zeros(self.game_info.board_size, dtype=BOARD_DTYPE).at[in_line_positions].set(1)
+
+            return mask
+
         return mask_fn, {}
 
     def mask_occupied(self, children):
