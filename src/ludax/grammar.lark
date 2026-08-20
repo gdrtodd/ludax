@@ -58,7 +58,7 @@ move_type: move_hop
          | move_step
 
 move_hop: "(" "hop" piece_reference direction_arg? piece_arg? hop_over_arg? capture_arg? priority_arg? ")"
-move_jump: "(" "jump" piece_reference distance_arg? priority_arg? ")"
+move_jump: "(" "jump" piece_reference distance_arg? exact_arg? priority_arg? ")"
 move_slide: "(" "slide" piece_reference direction_arg? distance_arg? priority_arg? ")"
 move_step: "(" "step" piece_reference direction_arg? priority_arg? ")"
 

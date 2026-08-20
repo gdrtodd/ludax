@@ -976,7 +976,7 @@ class GameRuleParser(Transformer):
         Move a piece by picking it up and placing it in an empty cell within a certain distance,
         ignoring directions and occupied cells in between
 
-        TODO TODO
+        TODO: handle destination and source constraints?
         '''
 
         piece, *optional_args = children
@@ -986,9 +986,56 @@ class GameRuleParser(Transformer):
         if distance is None:
             distance = max(self.game_info.observation_shape[:2])
 
+        exact = optional_args[OptionalArgs.EXACT]
         priority = optional_args[OptionalArgs.PRIORITY]
 
-        jump_indices = utils._get_jump_indices(self.game_info, distance)
+        jump_masks = utils._get_jump_masks(self.game_info, distance)
+        if exact:
+            if distance == 1:
+                jump_mask = jump_masks[0]
+            else:
+                jump_mask = jnp.logical_and(jump_masks[distance - 1], jnp.logical_not(jump_masks[distance - 2])).astype(BOARD_DTYPE)
+        else:
+            jump_mask = jump_masks[-1]
+
+        def legal_action_fn(state):
+            occupied_mask = (state.board != EMPTY).any(axis=0).astype(BOARD_DTYPE)
+
+            mask = jump_mask[:, :]
+
+            # Keep only the rows corresponding to pieces belonging to the current player (but keep the shape)
+            piece_mask = (state.board[piece] == state.current_player).astype(BOARD_DTYPE)
+            mask = jnp.where(
+                piece_mask[:, jnp.newaxis],
+                mask, jnp.zeros_like(mask)
+            )
+
+            # Block moves to occupied squares
+            mask = jnp.where(
+                occupied_mask[jnp.newaxis, :],
+                jnp.zeros_like(mask),
+                mask
+            )
+
+            return mask
+        
+        def apply_action_fn(state, action):
+            start_idx, end_idx = action // self.game_info.board_size, action % self.game_info.board_size
+            
+            board = state.board.at[piece, end_idx].set(state.current_player)
+            board = board.at[piece, start_idx].set(EMPTY)
+            
+            previous_actions = state.previous_actions.at[jnp.array([state.current_player, 2])].set(ACTION_DTYPE(end_idx))
+            previous_starts = state.previous_starts.at[jnp.array([state.current_player, 2])].set(ACTION_DTYPE(start_idx))
+
+            return state._replace(board=board, previous_actions=previous_actions, previous_starts=previous_starts)
+
+        # TODO: handle special cases where a jump cannot be reversed
+        move_type_idx = list(MoveTypes).index(MoveTypes.JUMP)
+        def can_move_again_fn(state):
+            return state._replace(can_move_again=state.can_move_again.at[state.current_player, piece, move_type_idx].set(1))
+
+        return piece, MoveTypes.JUMP, legal_action_fn, apply_action_fn, can_move_again_fn, priority
 
     def move_slide(self, children):
         '''

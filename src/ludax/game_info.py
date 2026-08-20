@@ -85,7 +85,7 @@ class GameInfoExtractor(Visitor):
                 self.rendering_info.piece_shape_mapping[piece_name] = unused_shapes.pop(0)
 
         # Determine the action space type based on the used mechanics
-        if MoveTypes.SLIDE in self.used_mechanics:
+        if MoveTypes.SLIDE in self.used_mechanics or MoveTypes.JUMP in self.used_mechanics:
             self.game_info.action_type = ActionTypes.FROM_TO
         elif MoveTypes.HOP in self.used_mechanics or MoveTypes.STEP in self.used_mechanics:
             self.game_info.action_type = ActionTypes.FROM_DIR
@@ -240,6 +240,15 @@ class GameInfoExtractor(Visitor):
             if value == "true" and "captured" not in self.game_state_attributes:
                 self.game_state_attributes.append("captured")
                 self.defaults.append(jnp.zeros(self.game_info.board_size, dtype=jnp.bool_))
+
+        # As with previous_actions, the third position tracks the start
+        # position for the most recent move, regardless of which player made it
+        if "previous_starts" not in self.game_state_attributes:
+            self.game_state_attributes.append("previous_starts")
+            self.defaults.append(jnp.zeros(3, dtype=ACTION_DTYPE))
+
+    def move_jump(self, tree):
+        self.used_mechanics.add(MoveTypes.JUMP)
 
         # As with previous_actions, the third position tracks the start
         # position for the most recent move, regardless of which player made it
