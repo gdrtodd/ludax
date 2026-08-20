@@ -95,6 +95,7 @@ function: function_add
         | function_line
         | function_multiply
         | function_pattern
+        | function_predicate
         | function_score
         | function_subtract
 
@@ -105,6 +106,7 @@ function_count: "(" "count" super_mask ")"
 function_line: "(" "line" piece_reference positive_int orientation_arg? exact_arg? player_arg? exclude_arg? ")"
 function_multiply: "(" "multiply" function+ ")"
 function_pattern: "(" "pattern" piece_reference (pattern_arg | shape_arg) rotate_arg? player_arg? exclude_arg? ")"
+function_predicate: super_predicate // special syntax to evaluate predicates as binary functions
 function_score: "(" "score" mover_reference ")"
 function_subtract: "(" "subtract" function function ")"
 

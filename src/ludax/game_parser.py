@@ -2764,6 +2764,17 @@ class GameRuleParser(Transformer):
 
         return function_fn, {}
 
+    def function_predicate(self, children):
+        '''
+        Return the binary value of the child predicate
+        '''
+        child_pred_fn, child_info = children[0]
+
+        def function_fn(state):
+            return child_pred_fn(state).astype(BOARD_DTYPE)
+
+        return function_fn, {}
+
     def function_score(self, children):
         '''
         Return the score of the specified player
