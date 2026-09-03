@@ -201,9 +201,12 @@ def render_game(id):
     region_legend = HANDLER.render_legend()
     policy_names = ['human'] + list(AVAILABLE_POLICIES.keys())
 
-    # Human-readable labels for the action-type toggle buttons. Fall back to generic
-    # "Type N" labels since game_info doesn't yet track real move-type names per index.
-    action_type_labels = [f"Type {i + 1}" for i in range(NUM_ACTION_TYPES)]
+    # Human-readable labels for the action-type toggle buttons (e.g. "Step" / "Jump").
+    # Fall back to generic "Type N" labels if game_info couldn't determine real names.
+    if len(ENV.game_info.action_type_labels) == NUM_ACTION_TYPES:
+        action_type_labels = list(ENV.game_info.action_type_labels)
+    else:
+        action_type_labels = [f"Type {i + 1}" for i in range(NUM_ACTION_TYPES)]
 
     return render_template('game.html',
                            game_svg=Markup(HANDLER.rendered_svg),

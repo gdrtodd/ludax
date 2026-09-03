@@ -22,6 +22,7 @@ class GameInfo:
     game_state_attributes: list = None
     move_type: str = None
     action_type: ActionTypes = None
+    action_type_labels: tuple[str] = ()
 
     num_piece_types: int = None
     piece_names: tuple[str] = ()

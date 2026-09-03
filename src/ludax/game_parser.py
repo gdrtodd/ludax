@@ -493,7 +493,7 @@ class GameRuleParser(Transformer):
         # they apply to disjoint directions, but if they overlap then there's ambiguity. Analogously,
         # having step and hop is OK even if they overlap directions
 
-        action_space, action_size = None, -1
+        action_space, action_size, action_move_types = None, -1, None
         for group_by_prio in self._group_by_index(move_infos, -1): # priority is last element
             for group_by_piece in self._group_by_index(group_by_prio, 0): # piece is first element
                 _, move_types, _, _, _, _ = zip(*list(group_by_piece))
@@ -508,6 +508,7 @@ class GameRuleParser(Transformer):
                     if size > action_size:
                         action_size = size
                         action_space = shape
+                        action_move_types = move_types if shape[0] > 1 else None
 
                 elif self.game_info.action_type == ActionTypes.FROM_TO:
                     # All distinct move types can be combined into a single "from-to" action space
@@ -522,10 +523,18 @@ class GameRuleParser(Transformer):
                     if size > action_size:
                         action_size = size
                         action_space = shape
+                        action_move_types = move_types if shape[0] > 1 else None
 
                 else:
                     raise ValueError(f"Unsupported action type for action space shape computation: {self.game_info.action_type}!")
-          
+
+        # Record human-readable labels (in the same order used to index the flattened
+        # action space) so the GUI can label per-type controls, e.g. "Step" / "Jump"
+        if action_move_types is not None:
+            self.game_info.action_type_labels = tuple(
+                mt.value.split('_', 1)[1].capitalize() for mt in action_move_types
+            )
+
         return action_space
 
     def _combine_move_fns(self, action_space_shape, move_types, legal_action_mask_fns, apply_action_fns):
