@@ -511,7 +511,9 @@ class GameRuleParser(Transformer):
 
                 elif self.game_info.action_type == ActionTypes.FROM_TO:
                     # All distinct move types can be combined into a single "from-to" action space
-                    if len(set(move_types)) == len(move_types):
+                    # TODO Sep 26: this is actually not the case, because a game might specify
+                    # multiple ways of reaching the same destination (e.g. step and jump)
+                    if len(move_types) == 1:
                         shape = (1, self.game_info.board_size, self.game_info.board_size)
                     else:
                         shape = (len(move_types), self.game_info.board_size, self.game_info.board_size)
@@ -523,7 +525,7 @@ class GameRuleParser(Transformer):
 
                 else:
                     raise ValueError(f"Unsupported action type for action space shape computation: {self.game_info.action_type}!")
-                
+          
         return action_space
 
     def _combine_move_fns(self, action_space_shape, move_types, legal_action_mask_fns, apply_action_fns):
@@ -644,15 +646,26 @@ class GameRuleParser(Transformer):
                         action
                     )
                 
-                sub_shape = (1, self.game_info.board_size, self.num_directions)
+                sub_shape = (1, self.game_info.board_size, self.game_info.board_size)
 
             elif len(move_types) == 1:
                 sub_legal_action_mask_fn = legal_action_mask_fns[0]
                 sub_apply_action_fn = apply_action_fns[0]
-                sub_shape = (1, self.game_info.board_size, self.num_directions)
+                sub_shape = (1, self.game_info.board_size, self.game_info.board_size)
 
             else:
-                raise NotImplementedError("Combining multiple move types with FROM_TO action type not implemented yet!")
+                collect_legal_masks = utils._get_collect_values_fn(legal_action_mask_fns)
+                
+                def sub_legal_action_mask_fn(state):
+                    all_masks = collect_legal_masks(state)
+                    return all_masks.astype(BOARD_DTYPE)
+                
+                def sub_apply_action_fn(state, action):
+                    move_type_idx = action // (self.game_info.board_size * self.game_info.board_size)
+                    sub_action = action % (self.game_info.board_size * self.game_info.board_size)
+                    return jax.lax.switch(move_type_idx, apply_action_fns, state, sub_action)
+                
+                sub_shape = (len(move_types), self.game_info.board_size, self.game_info.board_size)
 
             # Now check whether we need to inflate the legal mask to match the overall action space shape
             # If it doesn't match the argument, we can assume that it is strictly smaller in the first dimension

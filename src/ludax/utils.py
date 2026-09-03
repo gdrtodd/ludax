@@ -955,6 +955,32 @@ def _get_pattern_indices(game_info: GameInfo, arg_type: str, pattern: list, rota
     
     return jnp.array(indices, dtype=ACTION_DTYPE)
 
+def _get_jump_masks(game_info: GameInfo, distance: int):
+    '''
+    Return the masks corresponding to jumps up to a particular distance by iteratively
+    applying the adjacency lookup to get the positions that are reachable in a certain 
+    number of steps
+    '''
+    jump_masks = jnp.zeros((distance, game_info.board_size, game_info.board_size), dtype=ACTION_DTYPE)
+    jump_masks = jump_masks.at[:, jnp.arange(game_info.board_size), jnp.arange(game_info.board_size)].set(1)
+
+    # Collapse all the directions of the adjacency lookup
+    adjacency_lookup = _get_adjacency_lookup(game_info)
+    adjacency_lookup = adjacency_lookup.any(axis=0)
+
+    # Iteratively apply the adjacency lookup to get the positions that are reachable in a certain number of steps
+    for i in range(distance):
+        for row_idx, row in enumerate(jump_masks[i]):
+            active = jnp.argwhere(row == 1).flatten()
+            for idx in active:
+                adj_idxs = jnp.argwhere(adjacency_lookup[idx, :] == 1).flatten()
+                jump_masks = jump_masks.at[i:, row_idx, adj_idxs].set(1)
+
+    # Can't jump to the same position, so we set the diagonal to 0
+    jump_masks = jump_masks.at[:, jnp.arange(game_info.board_size), jnp.arange(game_info.board_size)].set(0)
+
+    return jump_masks
+
 def _get_collect_values_fn(outer_children, vmap=False):
     '''
     This returns a function which will collect the values of each of the children

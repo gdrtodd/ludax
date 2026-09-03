@@ -96,10 +96,43 @@
             padding: 5px 14px;
             cursor: pointer;
         }
+
+        #action_type_controls {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        #action_type_controls .action-type-label {
+            font-size: 15px;
+            color: #333;
+        }
+
+        #action_type_controls .action-type-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        #action_type_controls button {
+            font-size: 14px;
+            padding: 5px 14px;
+            cursor: pointer;
+            border: 1px solid #999;
+            border-radius: 4px;
+            background: #f0f0f0;
+        }
+
+        #action_type_controls button.active {
+            background: #f0a500;
+            border-color: #d38f00;
+            color: white;
+            font-weight: bold;
+        }
     </style>
     <script>
         let moveStage = "selecting_piece";
         let selectIdx = null;
+        let selectedActionType = 0;
 
         const AI_MOVE_DELAY_MS = 400;
 
@@ -152,8 +185,13 @@
 
             moveStage = data['stage'];
             selectIdx = data['select_idx'];
+            selectedActionType = data['selected_action_type'];
 
             document.getElementById('svg_container').classList.toggle('ai-turn', !!data['ai_turn']);
+
+            document.querySelectorAll('#action_type_controls button').forEach(btn => {
+                btn.classList.toggle('active', Number(btn.dataset.actionType) === selectedActionType);
+            });
         }
 
         function showResult(data) {
@@ -234,6 +272,22 @@
         }
 
         // ---------------------------------------------------------------------------
+        // Action-type selection (for games where a piece can take multiple distinct
+        // kinds of moves, e.g. Ataxx's step vs. jump, which can't be disambiguated
+        // just by clicking a piece / destination square)
+        // ---------------------------------------------------------------------------
+
+        async function setActionType(idx) {
+            const response = await fetch('/set_action_type', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action_type: idx }),
+            });
+            const data = await response.json();
+            await updateBoard(data);
+        }
+
+        // ---------------------------------------------------------------------------
         // Reset
         // ---------------------------------------------------------------------------
 
@@ -269,6 +323,19 @@
                 <p id="p1_score"   class="info-label">Player 1 score: 0</p>
                 <p id="p2_score"   class="info-label">Player 2 score: 0</p>
             </div>
+
+            {% if action_type_labels|length > 1 %}
+            <div id="action_type_controls">
+                <span class="action-type-label">Action type:</span>
+                <div class="action-type-buttons">
+                    {% for label in action_type_labels %}
+                    <button data-action-type="{{ loop.index0 }}"
+                            class="{{ 'active' if loop.index0 == 0 else '' }}"
+                            onclick="setActionType({{ loop.index0 }})">{{ label }}</button>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
 
             <div id="legend_container">{{ region_legend }}</div>
 

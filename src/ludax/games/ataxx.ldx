@@ -16,6 +16,7 @@
                 (move
                     (or
                         (step "token")
+                        (jump "token" distance:2 exact:true)
                     )
                     (effects
                         (flip (and (occupied opponent) (adjacent (prev_move mover))))
@@ -31,6 +32,5 @@
             )
         )
         (end
-            (if (line "token" 4) (mover win))
-            (if (full_board) (draw))))
+            (if (full_board) (by_score))))
 )
